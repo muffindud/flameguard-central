@@ -14,10 +14,10 @@ class ExchangeAdapter:
             exchange=f"{exchange}_receive", queue=self.callback_queue, routing_key="response"
         )
         channel.basic_consume(
-            queue=self.callback_queue, on_message_callback=self.callback, auto_ack=True
+            queue=self.callback_queue, on_message_callback=self.__callback, auto_ack=True
         )
     
-    def callback(self, ch, method, properties, body):
+    def __callback(self, ch, method, properties, body):
         command_key, command = body.split(" ")[0], body.split(" ")[1:-1] 
         print(f"Received: {body}")
 
@@ -26,8 +26,15 @@ class ExchangeAdapter:
         else:
             print(f"Command key {command_key} not found for {body}.")
 
-    def command_wrapper(self, func: callable, command: str):
-        self.commands[command] = func
-        def wrapper():
-            func()
+    def command_wrapper(self, command: str, *args, **kwargs):
+        def wrapper(func):
+            self.commands[command] = func
+            return func
         return wrapper
+
+    def send_command(self, command: str, *args):
+        self.channel.basic_publish(
+            exchange="telegram_rpc",
+            routing_key="send",
+            body=f"{command}",
+        )

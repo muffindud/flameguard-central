@@ -41,10 +41,13 @@ img_rec_exchange = ExchangeAdapter(channel, "img_rec")
     #   + exchange: img_rec_rpc_send
     #   - exchange: img_rec_rpc_rec
 
+# @ExchangeAdapter.command_wrapper("example_command")
+# def example_command(args):
+#     print("Example command called with args:", args)
+
 def main():
     while True:
         pass
-
 
 if __name__ == "__main__":
     try:
