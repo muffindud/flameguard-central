@@ -2,6 +2,8 @@ from pika.adapters.blocking_connection import BlockingChannel
 
 
 class GUIRPC:
+    commands = {}
+
     def __init__(self, channel: BlockingChannel) -> None:
         channel.exchange_declare(exchange="gui_rpc_send", exchange_type="direct")
 
@@ -16,8 +18,20 @@ class GUIRPC:
         )
 
     def callback(self, ch, method, properties, body):
-        self.response = body
+        command_key, command = body.split(" ")[0], body.split(" ")[1:-1] 
         print(f"Received: {body}")
+
+        if command_key in self.commands:
+            self.commands[command_key](command)
+        else:
+            print(f"Command key {command_key} not found for {body}.")
+
+    def command_wrapper(self, func: callable, command: str):
+        self.commands[command] = func
+        def wrapper():
+            func()
+        return wrapper
+
 
     def send_command(self, command: str) -> str:
         self.channel.basic_publish(
