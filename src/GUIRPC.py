@@ -23,3 +23,6 @@ class GUIRPC:
         self.channel.basic_publish(
             exchange="gui_rpc_send", routing_key="command", body=command
         )
+
+    def get_response(self) -> str:
+        return self.response

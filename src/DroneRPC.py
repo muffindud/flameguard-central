@@ -23,3 +23,6 @@ class DroneRPC:
         self.channel.basic_publish(
             exchange="drone_rpc_send", routing_key="command", body=command
         )
+
+    def get_response(self) -> str:
+        return self.response

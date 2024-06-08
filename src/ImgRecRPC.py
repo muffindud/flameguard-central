@@ -23,3 +23,6 @@ class ImgRecRPC:
         self.channel.basic_publish(
             exchange="img_rec_rpc_send", routing_key="command", body=command
         )
+
+    def get_response(self) -> str:
+        return self.response
