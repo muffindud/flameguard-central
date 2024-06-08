@@ -4,10 +4,8 @@ from pika.exceptions import AMQPConnectionError
 from dotenv import dotenv_values
 from threading import Thread
 
-from src.TelegramRPC import TelegramRPC
-from src.DroneRPC import DroneRPC
-from src.GUIRPC import GUIRPC
-from src.ImgRecRPC import ImgRecRPC
+from src.ExchangeAdapter import ExchangeAdapter
+
 
 config = dotenv_values(".env")
 try:
@@ -27,19 +25,19 @@ except KeyError:
 
 # Supproted calls:
 #   - send (obj.send_message)
-telegramRPC = TelegramRPC(channel)
+telegram_exchange = ExchangeAdapter(channel, "telegram")
     #   + exchange: telegram_rpc
 
 # Supported calls:
 #   - send (obj.send_command)
 #   - receive (obj.get_response)
-droneRPC = DroneRPC(channel)
+drone_exchange = ExchangeAdapter(channel, "drone")
     #   + exchange: drone_rpc_send
     #   - exchange: drone_rpc_rec
-guiRPC = GUIRPC(channel)
+gui_exchange = ExchangeAdapter(channel, "gui")
     #   + exchange: gui_rpc_send
     #   - exchange: gui_rpc_rec
-imgRecRPC = ImgRecRPC(channel)
+img_rec_exchange = ExchangeAdapter(channel, "img_rec")
     #   + exchange: img_rec_rpc_send
     #   - exchange: img_rec_rpc_rec
 
