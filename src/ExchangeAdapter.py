@@ -3,38 +3,49 @@ from pika.adapters.blocking_connection import BlockingChannel
 
 class ExchangeAdapter:
     commands = {}
+    exchange: str
+    channel: BlockingChannel
 
-    def __init__(self, channel: BlockingChannel, exchange: str) -> None:
-        channel.exchange_declare(f"{exchange}_send", exchange_type="direct")
-
-        channel.exchange_declare(f"{exchange}_receive", exchange_type="direct")
-        result = channel.queue_declare("", exclusive=True)
-        self.callback_queue = result.method.queue
-        channel.queue_bind(
-            exchange=f"{exchange}_receive", queue=self.callback_queue, routing_key="response"
-        )
-        channel.basic_consume(
-            queue=self.callback_queue, on_message_callback=self.__callback, auto_ack=True
-        )
-    
     def __callback(self, ch, method, properties, body):
-        command_key, command = body.split(" ")[0], body.split(" ")[1:-1] 
+        body = body.decode("utf-8")
+        command_key, command = body.split(" ", 1)
         print(f"Received: {body}")
 
         if command_key in self.commands:
+            print(f"Executing function \"{self.commands[command_key].__name__}\" with argument \"{command}\".")
             self.commands[command_key](command)
         else:
             print(f"Command key {command_key} not found for {body}.")
 
-    def command_wrapper(self, command: str, *args, **kwargs):
-        def wrapper(func):
-            self.commands[command] = func
-            return func
-        return wrapper
+    def __init__(self, channel: BlockingChannel, exchange: str) -> None:
+        self.channel = channel
+        self.exchange = exchange
 
-    def send_command(self, command: str, *args):
+        self.channel.exchange_declare(f"{self.exchange}", exchange_type="direct")
+
+        result = self.channel.queue_declare("", exclusive=True)
+        self.callback_queue = result.method.queue
+        self.channel.queue_bind(
+            exchange=f"{self.exchange}", queue=self.callback_queue, routing_key="receive"
+        )
+        self.channel.basic_consume(
+            queue=self.callback_queue, on_message_callback=self.__callback, auto_ack=True
+        )
+    
+
+    def command_wrapper(self, command: str):
+        def decorator(func: callable):
+            print(f"[{self.exchange}] Registered command: \"{command}\" with function \"{func.__name__}\".")
+            self.commands[command] = func
+            def wrapper(*args, **kwargs):
+                return func(*args, **kwargs)
+            return wrapper
+        return decorator
+
+    def send_command(self, command: str):
+        print(f"Sent: {command}")
         self.channel.basic_publish(
-            exchange="telegram_rpc",
+            exchange=f"{self.exchange}",
             routing_key="send",
             body=f"{command}",
         )

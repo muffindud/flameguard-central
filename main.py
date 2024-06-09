@@ -41,13 +41,16 @@ img_rec_exchange = ExchangeAdapter(channel, "img_rec")
     #   + exchange: img_rec_rpc_send
     #   - exchange: img_rec_rpc_rec
 
-# @ExchangeAdapter.command_wrapper("example_command")
-# def example_command(args):
-#     print("Example command called with args:", args)
+
+# Example usage:
+# @telegram_exchange.command_wrapper("send")
+# def send_message(message):
+#     telegram_exchange.send_command(message)
+
 
 def main():
-    while True:
-        pass
+    channel.start_consuming()
+
 
 if __name__ == "__main__":
     try:
