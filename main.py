@@ -5,6 +5,8 @@ from pika import BlockingConnection, ConnectionParameters
 from pika.exceptions import AMQPConnectionError
 from dotenv import dotenv_values
 from threading import Thread
+from json import loads
+from functools import partial
 
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -67,11 +69,25 @@ def img_rec_result(result: str):
     print(f"Image recognition result: {result}")
 
 
+drone_status = {}
+@drone_exchange.command_wrapper("status")
+def drone_status(status: str):
+    status = loads(status)
+    print(f"Drone status: {status}")
+    drone_status = status
+
+
 # Flask routes for the GUI
 @app.route("/stats", methods=["GET"])
 def gui_stats():
-    # TODO: Implement stats
-    return jsonify({"msg": "OK Stats"})
+    old_stats = drone_status
+    cb = partial(drone_exchange.send_command, "status")
+    connection.add_callback_threadsafe(cb)
+
+    while drone_status == old_stats:
+        pass
+
+    return jsonify(drone_status)
 
 
 @app.route("/image", methods=["GET"])
@@ -87,7 +103,8 @@ def gui_image():
 
 @app.route("/patrol", methods=["GET"])
 def gui_patrol():
-    # TODO: Implement patrol
+    cb = partial(drone_exchange.send_command, "patrol")
+    connection.add_callback_threadsafe(cb)
     return jsonify({"msg": "OK Patrol"})
 
 
@@ -101,5 +118,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except:
+    except Exception as e:
+        print(e)
         secure_exit()
