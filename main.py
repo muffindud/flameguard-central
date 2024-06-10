@@ -59,6 +59,11 @@ img_rec_exchange = ExchangeAdapter(channel, "img_rec")
 # RabbitMQ commands
 @img_rec_exchange.command_wrapper("result")
 def img_rec_result(result: str):
+    result_target, result_rate, result_link = result.split(" ")
+    if result_target == "Fire":
+        telegram_exchange.send_command(f"{result_link} Fire detected! with {result_rate}% confidence!")
+    elif result_target == "Smoke":
+        telegram_exchange.send_command(f"{result_link} Smoke detected! with {result_rate}% confidence!")
     print(f"Image recognition result: {result}")
 
 
@@ -88,6 +93,8 @@ def gui_patrol():
 
 def main():
     server_thread.start()
+    # img_rec_exchange.send_command("https://assets-api.kathmandupost.com/thumb.php?src=https://assets-cdn.kathmandupost.com/uploads/source/news/2024/news/thumb9-1712799709.jpg")
+    # img_rec_exchange.send_command("https://www.ecomatcher.com/wp-content/uploads/2023/08/ForestFires.jpg")
     channel.start_consuming()
 
 
