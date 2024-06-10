@@ -7,10 +7,31 @@ from threading import Thread
 from flask import Flask, jsonify
 from flask_cors import CORS
 
+from subprocess import run, CalledProcessError
+
 from src.ExchangeAdapter import ExchangeAdapter
 
+# Open the .env file and read the configuration
+try:
+    config = dotenv_values(".env")
+except FileNotFoundError:
+    print("Please make sure the .env file exists and is correctly configured.")
+    print("Required keys:")
+    print("  - RABBITMQ_HOST")
+    print("  - FTP_HOST")
+    print("  - FTP_USER")
+    print("  - FTP_PASS")
+    exit(1)
 
-config = dotenv_values(".env")
+# Start the FTP service
+try:
+    run(["sudo", "systemctl", "start", "vsftpd"], check=True)
+except CalledProcessError:
+    print("Failed to start vsftpd service.")
+    print("Please make sure the service is installed and the user has the necessary permissions.")
+    exit(1)
+
+# Connect to the RabbitMQ server
 try:
     connection = BlockingConnection(ConnectionParameters(config["RABBITMQ_HOST"]))
     channel = connection.channel()
@@ -22,7 +43,9 @@ except KeyError:
     print("Please make sure the .env file exists and is correctly configured.")
     print("Required keys:")
     print("  - RABBITMQ_HOST")
-    print("  - RABBITMQ_PORT")
+    print("  - FTP_HOST")
+    print("  - FTP_USER")
+    print("  - FTP_PASS")
     exit(1)
 
 app = Flask(__name__)
@@ -62,4 +85,5 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         connection.close()
+        run(["sudo", "systemctl", "stop", "vsftpd"], check=True)
         exit(0)
