@@ -1,4 +1,6 @@
 #!./venv/bin/python
+import os
+
 from pika import BlockingConnection, ConnectionParameters
 from pika.exceptions import AMQPConnectionError
 from dotenv import dotenv_values
@@ -7,24 +9,11 @@ from threading import Thread
 from flask import Flask, jsonify
 from flask_cors import CORS
 
-from subprocess import run, CalledProcessError
-
 from src.ExchangeAdapter import ExchangeAdapter
-from src.FTPDriver import FTPDriver
 
 def secure_exit(code: int = 0):
     try:
         connection.close()
-    except:
-        pass
-
-    try:
-        run(["sudo", "systemctl", "stop", "vsftpd"], check=True)
-    except:
-        pass
-
-    try:
-        ftp.close()
     except:
         pass
 
@@ -37,17 +26,8 @@ except FileNotFoundError:
     print("Please make sure the .env file exists and is correctly configured.")
     print("Required keys:")
     print("  - RABBITMQ_HOST")
-    print("  - FTP_HOST")
-    print("  - FTP_USER")
-    print("  - FTP_PASS")
     secure_exit(1)
-
-# Start the FTP service
-try:
-    run(["sudo", "systemctl", "start", "vsftpd"], check=True)
-except CalledProcessError:
-    print("Failed to start vsftpd service.")
-    print("Please make sure the service is installed and the user has the necessary permissions.")
+except:
     secure_exit(1)
 
 # Connect to the RabbitMQ server
@@ -62,21 +42,8 @@ except KeyError:
     print("Please make sure the .env file exists and is correctly configured.")
     print("Required keys:")
     print("  - RABBITMQ_HOST")
-    print("  - FTP_HOST")
-    print("  - FTP_USER")
-    print("  - FTP_PASS")
     secure_exit(1)
-
-try:
-    ftp = FTPDriver(config["FTP_HOST"], 21, config["FTP_USER"], config["FTP_PASS"])
-    ftp.connect()
-except KeyError:
-    print("Please make sure the .env file exists and is correctly configured.")
-    print("Required keys:")
-    print("  - RABBITMQ_HOST")
-    print("  - FTP_HOST")
-    print("  - FTP_USER")
-    print("  - FTP_PASS")
+except:
     secure_exit(1)
 
 app = Flask(__name__)
@@ -98,8 +65,13 @@ def gui_stats():
 
 @app.route("/image", methods=["GET"])
 def gui_image():
-    # TODO: Implement image
-    return jsonify({"msg": "OK Image"})
+    items = os.listdir("static/captures")
+    items = [item for item in items if item.endswith(".jpg")]
+    sorted_items = sorted(items, key = lambda x: os.path.getmtime(f"static/captures/{x}"), reverse=True)
+
+    return jsonify({
+        "src": "/static/captures/" + sorted_items[0]
+    })
 
 
 @app.route("/patrol", methods=["GET"])
@@ -116,5 +88,5 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except KeyboardInterrupt:
+    except:
         secure_exit()
