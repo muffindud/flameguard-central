@@ -10,6 +10,25 @@ from flask_cors import CORS
 from subprocess import run, CalledProcessError
 
 from src.ExchangeAdapter import ExchangeAdapter
+from src.FTPDriver import FTPDriver
+
+def secure_exit(code: int = 0):
+    try:
+        connection.close()
+    except:
+        pass
+
+    try:
+        run(["sudo", "systemctl", "stop", "vsftpd"], check=True)
+    except:
+        pass
+
+    try:
+        ftp.close()
+    except:
+        pass
+
+    exit(code)
 
 # Open the .env file and read the configuration
 try:
@@ -21,7 +40,7 @@ except FileNotFoundError:
     print("  - FTP_HOST")
     print("  - FTP_USER")
     print("  - FTP_PASS")
-    exit(1)
+    secure_exit(1)
 
 # Start the FTP service
 try:
@@ -29,7 +48,7 @@ try:
 except CalledProcessError:
     print("Failed to start vsftpd service.")
     print("Please make sure the service is installed and the user has the necessary permissions.")
-    exit(1)
+    secure_exit(1)
 
 # Connect to the RabbitMQ server
 try:
@@ -38,7 +57,7 @@ try:
 except AMQPConnectionError: 
     print("Failed to connect to RabbitMQ server.")
     print("Please make sure the server is running and the configuration is correct.")
-    exit(1)
+    secure_exit(1)
 except KeyError:
     print("Please make sure the .env file exists and is correctly configured.")
     print("Required keys:")
@@ -46,7 +65,19 @@ except KeyError:
     print("  - FTP_HOST")
     print("  - FTP_USER")
     print("  - FTP_PASS")
-    exit(1)
+    secure_exit(1)
+
+try:
+    ftp = FTPDriver(config["FTP_HOST"], 21, config["FTP_USER"], config["FTP_PASS"])
+    ftp.connect()
+except KeyError:
+    print("Please make sure the .env file exists and is correctly configured.")
+    print("Required keys:")
+    print("  - RABBITMQ_HOST")
+    print("  - FTP_HOST")
+    print("  - FTP_USER")
+    print("  - FTP_PASS")
+    secure_exit(1)
 
 app = Flask(__name__)
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
@@ -64,10 +95,12 @@ def gui_stats():
     # TODO: Implement stats
     return jsonify({"msg": "OK Stats"})
 
+
 @app.route("/image", methods=["GET"])
 def gui_image():
     # TODO: Implement image
     return jsonify({"msg": "OK Image"})
+
 
 @app.route("/patrol", methods=["GET"])
 def gui_patrol():
@@ -84,6 +117,4 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        connection.close()
-        run(["sudo", "systemctl", "stop", "vsftpd"], check=True)
-        exit(0)
+        secure_exit()
