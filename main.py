@@ -4,6 +4,9 @@ from pika.exceptions import AMQPConnectionError
 from dotenv import dotenv_values
 from threading import Thread
 
+from flask import Flask, jsonify
+from flask_cors import CORS
+
 from src.ExchangeAdapter import ExchangeAdapter
 
 
@@ -22,33 +25,35 @@ except KeyError:
     print("  - RABBITMQ_PORT")
     exit(1)
 
+app = Flask(__name__)
+cors = CORS(app, resources={r"/*": {"origins": "*"}})
+server_thread = Thread(target=app.run, kwargs={"host": "0.0.0.0", "port": 5000})
+server_thread.daemon = True
 
-# Supproted calls:
-#   - send (obj.send_message)
 telegram_exchange = ExchangeAdapter(channel, "telegram")
-    #   + exchange: telegram_rpc
-
-# Supported calls:
-#   - send (obj.send_command)
-#   - receive (obj.get_response)
 drone_exchange = ExchangeAdapter(channel, "drone")
-    #   + exchange: drone_rpc_send
-    #   - exchange: drone_rpc_rec
-gui_exchange = ExchangeAdapter(channel, "gui")
-    #   + exchange: gui_rpc_send
-    #   - exchange: gui_rpc_rec
 img_rec_exchange = ExchangeAdapter(channel, "img_rec")
-    #   + exchange: img_rec_rpc_send
-    #   - exchange: img_rec_rpc_rec
 
 
-# Example usage:
-# @telegram_exchange.command_wrapper("send")
-# def send_message(message):
-#     telegram_exchange.send_command(message)
+# Flask routes for the GUI
+@app.route("/stats", methods=["GET"])
+def gui_stats():
+    # TODO: Implement stats
+    return jsonify({"msg": "OK Stats"})
+
+@app.route("/image", methods=["GET"])
+def gui_image():
+    # TODO: Implement image
+    return jsonify({"msg": "OK Image"})
+
+@app.route("/patrol", methods=["GET"])
+def gui_patrol():
+    # TODO: Implement patrol
+    return jsonify({"msg": "OK Patrol"})
 
 
 def main():
+    server_thread.start()
     channel.start_consuming()
 
 
