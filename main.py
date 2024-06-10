@@ -7,6 +7,7 @@ from dotenv import dotenv_values
 from threading import Thread
 from json import loads
 from functools import partial
+from requests import get
 
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -77,6 +78,15 @@ def drone_status(status: str):
     drone_status = status
 
 
+@drone_exchange.command_wrapper("picture")
+def drone_picture(picture: str):
+    print(f"Drone picture: {picture}")
+    picture_name = picture.split("/")[-1]
+    with open(f"static/captures/{picture_name}", "wb") as f:
+        f.write(get(picture).content)
+    img_rec_exchange.send_command(picture)
+
+
 # Flask routes for the GUI
 @app.route("/stats", methods=["GET"])
 def gui_stats():
@@ -93,8 +103,9 @@ def gui_stats():
 @app.route("/image", methods=["GET"])
 def gui_image():
     items = os.listdir("static/captures")
-    items = [item for item in items if item.endswith(".jpg")]
+    items = [item for item in items if item.endswith(".png") or item.endswith(".jpg") or item.endswith(".jpeg")]
     sorted_items = sorted(items, key = lambda x: os.path.getmtime(f"static/captures/{x}"), reverse=True)
+    print(sorted_items)
 
     return jsonify({
         "src": "/static/captures/" + sorted_items[0]
