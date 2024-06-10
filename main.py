@@ -56,6 +56,12 @@ drone_exchange = ExchangeAdapter(channel, "drone")
 img_rec_exchange = ExchangeAdapter(channel, "img_rec")
 
 
+# RabbitMQ commands
+@img_rec_exchange.command_wrapper("result")
+def img_rec_result(result: str):
+    print(f"Image recognition result: {result}")
+
+
 # Flask routes for the GUI
 @app.route("/stats", methods=["GET"])
 def gui_stats():
